@@ -33,7 +33,7 @@ llm_with_tools = llm.bind_tools(tools)
 def chatbot_node(state:State):
 
 	messages = [SYSTEM_PROMPT] + state["messages"]
-    	response = llm_with_tools.invoke(messages)
+    response = llm_with_tools.invoke(messages)
 	return {"messages":[response]}
 
 # 4. Tool Node
