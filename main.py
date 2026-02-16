@@ -11,6 +11,10 @@ bot = Bot(token=TOKEN)
 
 app = FastAPI()
 
+@app.get("/")
+def health():
+    return {"status": "ok"}
+	
 @app.post("/webhook")
 async def telegram_webhook(request: Request):
     data = await request.json()
@@ -18,14 +22,17 @@ async def telegram_webhook(request: Request):
 
     if update.message and update.message.text:
         user_text = update.message.text
-
+		# result is a final state
         result = agent.invoke({"messages": [HumanMessage(content=user_text)]})
-        # result is a final state
-        reply = result["messages"][-1]
+		reply = ""
+		for message in reversed(result["messages"]):
+			if isinstance(message, AIMessage) and message.content:
+				reply = message.content
+				break
 
         await bot.send_message(
             chat_id=update.message.chat_id,
-            text=reply.content
+            text=reply
         )
 
     return {"ok": True}

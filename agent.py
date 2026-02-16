@@ -22,13 +22,15 @@ llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
 llm_with_tools = llm.bind_tools(tools)
 
 # 3. Agent Node
-def chatbot_node(state: MessagesState):
-    return {"messages": [llm_with_tools.invoke(state["messages"])]}
+def chatbot_node(state:State):
+
+	response = llm_with_tools.invoke(state["messages"])
+    return {"messages": [response]}
 
 # 4. Tool Node
 tool_node = ToolNode(tools)
 
-builder = StateGraph(MessagesState)
+builder = StateGraph(State)
 
 # Add Nodes
 builder.add_node("chatbot", chatbot_node)
