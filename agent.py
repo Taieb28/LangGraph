@@ -3,6 +3,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import StateGraph, MessagesState, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.graph.message import add_messages
+from langchain_core.messages import SystemMessage, AIMessage
 from typing import Annotated, TypedDict, List
 from tools import multiply
 import os
@@ -16,6 +17,13 @@ class State(TypedDict):
 
 tools = [multiply] # list of Tools
 
+SYSTEM_PROMPT = SystemMessage(
+    content=(
+       """
+	  انت مساعد ذكي ومتخصص اذا لم تكن لديك اداة لاستعمالها في الرد
+	  لاتقم بتخمين الاجابة وانما رد بالتالي "لا املك اداة لاستعمالها" """
+    )
+)
 
 # 2. Configuraton
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
@@ -23,7 +31,9 @@ llm_with_tools = llm.bind_tools(tools)
 
 # 3. Agent Node
 def chatbot_node(state:State):
-	response = llm_with_tools.invoke(state["messages"])
+
+	messages = [SYSTEM_PROMPT] + state["messages"]
+    	response = llm_with_tools.invoke(messages)
 	return {"messages":[response]}
 
 # 4. Tool Node
