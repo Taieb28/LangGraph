@@ -24,7 +24,7 @@ llm_with_tools = llm.bind_tools(tools)
 # 3. Agent Node
 def chatbot_node(state:State):
 	response = llm_with_tools.invoke(state["messages"])
-    return {"messages":[response]}
+	return {"messages":[response]}
 
 # 4. Tool Node
 tool_node = ToolNode(tools)
