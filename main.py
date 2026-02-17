@@ -1,12 +1,12 @@
 # main.py
+import logging
 from fastapi import FastAPI, Request
 from telegram import Bot, Update
-import os
 from langchain_core.messages import HumanMessage, AIMessage
 from agent import agent 
+import os
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-
 bot = Bot(token=TOKEN)
 
 app = FastAPI()
@@ -19,14 +19,14 @@ def health():
 async def telegram_webhook(request: Request):
     try:
         data = await request.json()
-        # تحويل البيانات القادمة من تليجرام إلى كائن Update
+        logging.info(f"Received update: {data}")
+        
         update = Update.de_json(data, bot)
-
+        
         if update.message and update.message.text:
             user_text = update.message.text
             chat_id = update.message.chat_id
 
-            # استخدام ainvoke بدلاً من invoke لأنه أفضل مع FastAPI
             result = await agent.ainvoke({"messages": [HumanMessage(content=user_text)]})
             
             reply = "نعتذر، لم أتمكن من صياغة رد حالياً." 
@@ -44,5 +44,5 @@ async def telegram_webhook(request: Request):
 
         return {"ok": True}
     except Exception as e:
-        print(f"Error: {e}")
+        logging.error(f"Error: {e}", exc_info=True)  
         return {"ok": False, "error": str(e)}

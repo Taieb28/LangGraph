@@ -22,7 +22,7 @@ SYSTEM_PROMPT = SystemMessage(
 tools = [multiply]
 
 # 1. 
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash") 
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite") 
 llm_with_tools = llm.bind_tools(tools)
 
 # 2. 
