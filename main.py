@@ -63,9 +63,11 @@ async def handle_apify_update(request: Request, background_tasks: BackgroundTask
     data = await request.json()
     dataset_id = data.get("datasetId")
     if dataset_id:
-        background_tasks.add_task(fetch_process_and_send, dataset_id, bot, CHAT_ID)
+        background_tasks.add_task(fetch_process_and_send, dataset_id)
         return {"status": "ok"}
     return {"status": "error", "message": "datasetId not found in payload"}
+   
+   
    
 def fetch_process_and_send(dataset_id):
     """جلب البيانات الفعلية، استخراج الأسماء، والإرسال"""
