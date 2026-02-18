@@ -63,20 +63,20 @@ async def handle_apify_update(request: Request, background_tasks: BackgroundTask
     data = await request.json()
     dataset_id = data.get("datasetId")
     if dataset_id:
-        background_tasks.add_task(fetch_process_and_send, dataset_id)
+        background_tasks.add_task(fetch_process_and_send, dataset_id, bot, CHAT_ID)
         return {"status": "ok"}
     return {"status": "error", "message": "datasetId not found in payload"}
    
    
    
-def fetch_process_and_send(dataset_id):
+async def fetch_process_and_send(dataset_id, bot, chat_id):
     """جلب البيانات الفعلية، استخراج الأسماء، والإرسال"""
     try:
         # 1. جلب النتائج من Apify Dataset
         items = apify_client.dataset(dataset_id).list_items().items
         
         if not items:
-            bot.send_message(CHAT_ID, "⚠️ اكتمل البحث ولكن لم يتم العثور على فيديوهات.")
+            await bot.send_message(chat_id=chat_id, text="⚠️ اكتمل البحث ولم يتم العثور على نتائج.")
             return
 
         message = "🆕 **تحديث دوري: منتجات ترند من TikTok**\n\n"
@@ -97,14 +97,17 @@ def fetch_process_and_send(dataset_id):
             message += "------------------\n"
 
         # 3. الإرسال النهائي للتلجرام
-        bot.send_message(CHAT_ID, message, parse_mode="Markdown")
+        await bot.send_message(chat_id=chat_id, text=message, parse_mode="Markdown")
 
     except Exception as e:
-        print(f"Error: {e}")
-        bot.send_message(CHAT_ID, f"❌ حدث خطأ تقني: {str(e)}")
-
+        print(f"Error in processor: {e}")
+        # محاولة إرسال رسالة بالخطأ
+        try:
+            await bot.send_message(chat_id=chat_id, text=f"❌ حدث خطأ تقني: {str(e)}")
+        except:
+            pass
 def clean_product_name(text):
-    """دالة بسيطة لتنظيف النص (يمكنك استبدالها بـ LLM لاحقاً)"""
+    
     # حذف الهاشتاقات والرموز لتوضيح اسم المنتج
     words = [w for w in text.split() if not w.startswith('#')]
     return " ".join(words[:5]) # نأخذ أول 5 كلمات كاسم افتراضي
