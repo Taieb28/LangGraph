@@ -15,8 +15,7 @@ class State(TypedDict):
 
 # 
 SYSTEM_PROMPT = SystemMessage(
-    content="""أنت مساعد ذكي ومتخصص. إذا لم تكن لديك أداة لاستعمالها في الرد، 
-    لا تقم بتخمين الإجابة وإنما رد بالتالي: "لا املك اداة لاستعمالها"."""
+    content="انت مساعد ذكي استعمل الادوات المتاحة ولاتقم بتخمين الاجابة اذا لم تتوفر اداة قل لااملك اداة"
 )
 
 tools = [multiply]
@@ -29,16 +28,6 @@ llm_with_tools = llm.bind_tools(tools)
 def chatbot_node(state: State):
     full_messages = [SYSTEM_PROMPT] + state["messages"]
     response = llm_with_tools.invoke(full_messages)
-    
-    if isinstance(response.content, list):
-        for item in response.content:
-            if isinstance(item, dict) and "text" in item:
-                response.content = item["text"]
-                break
-            elif isinstance(item, str):
-                response.content = item
-                break
-
     return {"messages": [response]}
 
 # 3

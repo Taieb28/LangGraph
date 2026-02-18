@@ -28,21 +28,28 @@ async def telegram_webhook(request: Request):
             chat_id = update.message.chat_id
 
             result = await agent.ainvoke({"messages": [HumanMessage(content=user_text)]})
-            
-            reply = "نعتذر، لم أتمكن من صياغة رد حالياً." 
-            
-            for message in reversed(result["messages"]):
-                if isinstance(message, AIMessage) and message.content:
-                    reply = message.content
-                    break
-
             # إرسال الرد
             await bot.send_message(
                 chat_id=chat_id,
-                text=reply
+                text=extract_ai_reply(result["messages"])
             )
 
         return {"ok": True}
     except Exception as e:
         logging.error(f"Error: {e}", exc_info=True)  
         return {"ok": False, "error": str(e)}
+    
+def extract_ai_reply(messages):
+    for message in reversed(messages):
+        if not isinstance(message, AIMessage):
+            continue 
+        # معالجة النص المباشر
+        if isinstance(message.content, str) and message.content.strip():
+            return message.content
+            
+        # معالجة القائمة (Gemini Style)
+        if isinstance(message.content, list):
+            for part in message.content:
+                if isinstance(part, dict) and part.get("type") == "text":
+                    return part.get("text", "")
+    return "نعتذر لم اتلقى اي رد من النموذج"
