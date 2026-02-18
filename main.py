@@ -1,13 +1,16 @@
 # main.py
 import logging
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from telegram import Bot, Update
+from apify_client import ApifyClient
 from langchain_core.messages import HumanMessage, AIMessage
 from agent import agent 
 import os
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 bot = Bot(token=TOKEN)
+apify_client = ApifyClient(os.getenv("APIFY_API_TOKEN"))
+CHAT_ID = os.getenv("MY_TELEGRAM_CHAT_ID")
 
 app = FastAPI()
 
@@ -53,3 +56,54 @@ def extract_ai_reply(messages):
                 if isinstance(part, dict) and part.get("type") == "text":
                     return part.get("text", "")
     return "نعتذر لم اتلقى اي رد من النموذج"
+#==============================================================================
+@app.post("/apify-webhook")
+async def handle_apify_update(request: Request, background_tasks: BackgroundTasks):
+    
+    data = await request.json()
+    dataset_id = data.get("datasetId")
+    if dataset_id:
+        background_tasks.add_task(fetch_process_and_send, dataset_id, bot, CHAT_ID)
+        return {"status": "ok"}
+    return {"status": "error", "message": "datasetId not found in payload"}
+   
+def fetch_process_and_send(dataset_id):
+    """جلب البيانات الفعلية، استخراج الأسماء، والإرسال"""
+    try:
+        # 1. جلب النتائج من Apify Dataset
+        items = apify_client.dataset(dataset_id).list_items().items
+        
+        if not items:
+            bot.send_message(CHAT_ID, "⚠️ اكتمل البحث ولكن لم يتم العثور على فيديوهات.")
+            return
+
+        message = "🆕 **تحديث دوري: منتجات ترند من TikTok**\n\n"
+        
+        # 2. معالجة أول 5 نتائج
+        for item in items[:5]:
+            raw_desc = item.get('videoDescription', 'لا يوجد وصف')
+            url = item.get('webVideoUrl', '#')
+            
+            # ملاحظة: هنا يمكنك استدعاء نموذج LangGraph الخاص بك لتحليل raw_desc
+            # واستخراج "اسم المنتج" بدقة بدلاً من النص الخام.
+            
+            product_name = clean_product_name(raw_desc) # دالة تنظيف بسيطة
+            
+            message += f"📦 **المنتج:** {product_name}\n"
+            message += f"📝 **الوصف:** {raw_desc[:80]}...\n"
+            message += f"🔗 **الرابط:** {url}\n\n"
+            message += "------------------\n"
+
+        # 3. الإرسال النهائي للتلجرام
+        bot.send_message(CHAT_ID, message, parse_mode="Markdown")
+
+    except Exception as e:
+        print(f"Error: {e}")
+        bot.send_message(CHAT_ID, f"❌ حدث خطأ تقني: {str(e)}")
+
+def clean_product_name(text):
+    """دالة بسيطة لتنظيف النص (يمكنك استبدالها بـ LLM لاحقاً)"""
+    # حذف الهاشتاقات والرموز لتوضيح اسم المنتج
+    words = [w for w in text.split() if not w.startswith('#')]
+    return " ".join(words[:5]) # نأخذ أول 5 كلمات كاسم افتراضي
+
