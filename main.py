@@ -61,6 +61,10 @@ def extract_ai_reply(messages):
 async def handle_apify_update(request: Request, background_tasks: BackgroundTasks):
     
     data = await request.json()
+    
+    await bot.send_message(chat_id=CHAT_ID, text=data)
+    
+    
     dataset_id = data.get("datasetId")
     if dataset_id:
         background_tasks.add_task(fetch_process_and_send, dataset_id, bot, CHAT_ID)
@@ -73,15 +77,16 @@ async def fetch_process_and_send(dataset_id, bot, chat_id):
         # 1. جلب النتائج من Apify Dataset
         items = apify_client.dataset(dataset_id).list_items().items
         
+        await bot.send_message(chat_id=CHAT_ID, text=items)
         if not items:
             await bot.send_message(chat_id=chat_id, text="⚠️ اكتمل البحث ولم يتم العثور على نتائج.")
             return
 
         message = "🆕 <b>تحديث دوري: منتجات ترند من TikTok</b>\n\n"
-        
+        # videoDescription
         # 2. معالجة أول 5 نتائج
         for item in items[:5]:
-            raw_desc = item.get('videoDescription', 'لا يوجد وصف')
+            raw_desc = item.get('text', 'لا يوجد وصف')
             url = item.get('webVideoUrl', '#')
             
             # ملاحظة: هنا يمكنك استدعاء نموذج LangGraph الخاص بك لتحليل raw_desc
