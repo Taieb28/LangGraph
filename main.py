@@ -67,8 +67,6 @@ async def handle_apify_update(request: Request, background_tasks: BackgroundTask
         return {"status": "ok"}
     return {"status": "error", "message": "datasetId not found in payload"}
    
-   
-   
 async def fetch_process_and_send(dataset_id, bot, chat_id):
     """جلب البيانات الفعلية، استخراج الأسماء، والإرسال"""
     try:
@@ -79,7 +77,7 @@ async def fetch_process_and_send(dataset_id, bot, chat_id):
             await bot.send_message(chat_id=chat_id, text="⚠️ اكتمل البحث ولم يتم العثور على نتائج.")
             return
 
-        message = "🆕 **تحديث دوري: منتجات ترند من TikTok**\n\n"
+        message = "🆕 <b>تحديث دوري: منتجات ترند من TikTok</b>\n\n"
         
         # 2. معالجة أول 5 نتائج
         for item in items[:5]:
@@ -91,24 +89,29 @@ async def fetch_process_and_send(dataset_id, bot, chat_id):
             
             product_name = clean_product_name(raw_desc) # دالة تنظيف بسيطة
             
-            message += f"📦 **المنتج:** {product_name}\n"
-            message += f"📝 **الوصف:** {raw_desc[:80]}...\n"
-            message += f"🔗 **الرابط:** {url}\n\n"
-            message += "------------------\n"
+            message += f"📦 <b>المنتج:</b> {product_name}\n"
+            message += f"📝 <b>الوصف:</b> {raw_desc[:80]}...\n"
+            message += f"🔗 <b>الرابط:</b> <a href=\"{url}\">اضغط هنا</a>\n"
+            message += "------------------\n\n"
 
         # 3. الإرسال النهائي للتلجرام
-        await bot.send_message(chat_id=chat_id, text=message, parse_mode="Markdown")
+        await bot.send_message(chat_id=chat_id, text=message, parse_mode="HTML", disable_web_page_preview=True)
 
     except Exception as e:
-        print(f"Error in processor: {e}")
-        # محاولة إرسال رسالة بالخطأ
+        print(f"[ERROR] fetch_process_and_send: {e}")
         try:
-            await bot.send_message(chat_id=chat_id, text=f"❌ حدث خطأ تقني: {str(e)}")
-        except:
-            pass
+            await bot.send_message(
+                chat_id=chat_id,
+                text=f"❌ حدث خطأ تقني:\n<code>{str(e)}</code>",
+                parse_mode="HTML"
+            )
+        except Exception as send_error:
+            print(f"[ERROR] Failed to send error message: {send_error}")
 def clean_product_name(text):
     
-    # حذف الهاشتاقات والرموز لتوضيح اسم المنتج
+    # ✅ التحقق من النص قبل المعالجة
+    if not text or not text.strip():
+        return "غير محدد"
     words = [w for w in text.split() if not w.startswith('#')]
-    return " ".join(words[:5]) # نأخذ أول 5 كلمات كاسم افتراضي
+    return " ".join(words[:5]) if words else "غير محدد"
 
