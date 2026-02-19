@@ -59,11 +59,14 @@ def extract_ai_reply(messages):
 #==============================================================================
 @app.post("/apify-webhook")
 async def handle_apify_update(request: Request, background_tasks: BackgroundTasks):
-    
+    """"
+        {
+            "eventType": {{eventType}},
+            "runId": {{resource.id}},
+            "datasetId": {{resource.defaultDatasetId}}
+        }
+    """
     data = await request.json()
-    
-    await bot.send_message(chat_id=CHAT_ID, text=data)
-    
     
     dataset_id = data.get("datasetId")
     if dataset_id:
@@ -75,24 +78,24 @@ async def fetch_process_and_send(dataset_id, bot, chat_id):
     """جلب البيانات الفعلية، استخراج الأسماء، والإرسال"""
     try:
         # 1. جلب النتائج من Apify Dataset
+        """apify_client = ApifyClient(token="your_api_token")
+           dataset = apify_client.dataset(dataset_id)
+           response = dataset.list_items()             # اجلب البيانات
+           items = response.items                      # استخرج القائمة فقط
+        """
         items = apify_client.dataset(dataset_id).list_items().items
         
-        await bot.send_message(chat_id=CHAT_ID, text=items)
         if not items:
             await bot.send_message(chat_id=chat_id, text="⚠️ اكتمل البحث ولم يتم العثور على نتائج.")
             return
 
         message = "🆕 <b>تحديث دوري: منتجات ترند من TikTok</b>\n\n"
-        # videoDescription
         # 2. معالجة أول 5 نتائج
         for item in items[:5]:
             raw_desc = item.get('text', 'لا يوجد وصف')
             url = item.get('webVideoUrl', '#')
             
-            # ملاحظة: هنا يمكنك استدعاء نموذج LangGraph الخاص بك لتحليل raw_desc
-            # واستخراج "اسم المنتج" بدقة بدلاً من النص الخام.
-            
-            product_name = clean_product_name(raw_desc) # دالة تنظيف بسيطة
+            product_name = clean_product_name(raw_desc) 
             
             message += f"📦 <b>المنتج:</b> {product_name}\n"
             message += f"📝 <b>الوصف:</b> {raw_desc[:80]}...\n"
